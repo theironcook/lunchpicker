@@ -1,0 +1,39 @@
+<html>
+
+  <head>
+    <title>Lunch Picker</title>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta http-equiv="Content-Language" content="en">
+    
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
+    
+
+    <script language="javascript">                  
+      window.onload = function(){
+        document.getElementById('teamQuery').addEventListener('keypress', (event) => {
+          if (event.keyCode == 13) {
+            findTeams();
+          }
+        });        
+      }      
+
+
+    </script>
+  </head> 
+
+  <body class="">
+    <section class="section">
+      <div class="container">
+        <h1 class="title ">
+          The Lunch Picker!  The most important decision of the day.
+        </h1>
+      </div>
+    </section>
+    
+  </body>
+
+  <!-- Copyright Bart Wood, MIT License-->
+</html>
