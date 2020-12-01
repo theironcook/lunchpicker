@@ -1,22 +1,160 @@
 <html>
 
   <head>
-    <title>Lunch Picker</title>
+    <title>THE Lunch Picker</title>
     <meta charset="UTF-8">
     <meta name="google" content="notranslate">
     <meta http-equiv="Content-Language" content="en">
     
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
     
 
-    <script language="javascript">                  
+    <script language="javascript">
       window.onload = function(){
-        document.getElementById('teamQuery').addEventListener('keypress', (event) => {
-          if (event.keyCode == 13) {
-            findTeams();
-          }
+        // Load choice list if it's available
+        if(!localStorage.getItem('lunchChoices')){
+            localStorage.setItem('lunchChoices', 
+            JSON.stringify(['Asa Ramen',
+                            'Laid Back Poke',
+                            'Slap Fish',
+                            'Smash Burger',
+                            'Zuppas',
+                            'K88',
+                            'Lucy\'s Pizza',
+                            'The Habit',
+                            'Cafe Trang Vietnamese',
+                            'Sweeto Burrito',
+                            'Costa Vida',
+                            'Red Fuego',
+                            'Bok Bok Chicken',
+                            'Tsunami',
+                            'Moh Bettas',
+                            'Chick Fila',
+                            'R&R BBQ']));
+        }
+
+        if(!localStorage.getItem('previousChoices')){
+          localStorage.setItem('previousChoices', JSON.stringify({}));
+        }
+        const previousChoices = JSON.parse(localStorage.getItem('previousChoices'));
+
+        const lunchChoices = JSON.parse(localStorage.getItem('lunchChoices'));
+        const includedChoices = {};
+        lunchChoices.map(choice => includedChoices[choice] = true); // everything is included by default
+       
+        new Vue({
+          el: '#app',
+          data: {
+            lunchChoices,
+            includedChoices,
+            newChoice: '',
+            showIntro: true,
+            spinMessage: '',
+            waiter: 0,
+            eliminatedMessage: '',
+            spinChoicesLeft: [],
+            finalChoice: '',
+            previousChoices
+          },
+          methods: {
+            removeChoice(choice){
+              if(confirm(`Are you sure you want to remove ${choice} as an option?`)){
+                const index = lunchChoices.indexOf(choice);
+
+                if(index !== -1){
+                  delete includedChoices[choice];
+                  lunchChoices.splice(index, 1);
+                  localStorage.setItem('lunchChoices', JSON.stringify(lunchChoices));
+                }                              
+              }
+            },
+            onAddChoiceClicked(){
+              const choice = this.newChoice.trim();
+              if(!choice.trim()){
+                alert('You need to enter some text for the new choice.');
+              }
+              else {
+                lunchChoices.push(choice);
+                includedChoices[choice] = true;
+                localStorage.setItem('lunchChoices', JSON.stringify(lunchChoices));
+              }
+            },
+
+            onPickLunchClicked(){
+              this.showIntro = false;
+              this.spinMessage = `Isn't this exciting!!<br><br>Let's find out where you're going to eat today!`;
+              setTimeout(this.startTheSpin, 750);
+            },
+
+
+            startTheSpin(){     
+              this.finalChoice = '';
+              this.spinChoicesLeft = [];
+              this.lunchChoices.forEach(choice => {
+                if(this.includedChoices[choice]){
+                  this.spinChoicesLeft.push(choice);
+                }
+              });
+
+              if(this.spinChoicesLeft.length === 0){
+                alert(`Hey silly, you didn't include any choices for lunch!`);
+                return;
+              }
+              else {
+                this.spinTheWheel();
+              }
+            },
+
+            async spinTheWheel(){
+              if(this.spinChoicesLeft.length === 1){
+                this.finalChoice = this.spinChoicesLeft[0];
+                this.spinMessage = '';                
+                this.eliminatedMessage = '';
+              }
+              else {
+                this.spinMessage = 'Spinning the wheel';
+                await this.showWaiter();
+
+                const removeChoice = Math.floor(Math.random() * this.spinChoicesLeft.length);
+                this.eliminatedMessage = `${this.spinChoicesLeft[removeChoice]} eliminated`;                
+                this.spinChoicesLeft.splice(removeChoice, 1);                
+                this.spinTheWheel();
+              }
+            },
+
+            async showWaiter(){
+              const that = this;
+              return new Promise((res) => {      
+                const wait = () => {
+                  if(that.waiter < 10){
+                    that.waiter++;
+                    setTimeout(wait, 50);                    
+                  }
+                  else {
+                    this.waiter = 0;
+                    res();
+                  }
+                };
+                wait();
+              });
+            },
+
+            onClickedRecord(finalChoice){
+              const date = new Date();
+              date.setHours(0,0,0,0); // start of day
+              this.previousChoices[date] = finalChoice;
+              // stupid vue 2 reactivity
+              const tmp = this.previousChoices;
+              this.previousChoices = {};
+              this.previousChoices = tmp;
+              localStorage.setItem('previousChoices', JSON.stringify(this.previousChoices));
+            }
+          }          
         });        
       }      
 
@@ -24,13 +162,81 @@
     </script>
   </head> 
 
-  <body class="">
-    <section class="section">
+  <body class="" style="font-family: 'Ubuntu', sans-serif;">
+    <section id="app" class="section">
       <div class="container">
         <h1 class="title ">
-          The Lunch Picker!  The most important decision of the day.
+          The Lunch Picker!  The most important decision of the day. &reg;
         </h1>
+
+        <div style="display: flex;">
+
+          <table class="table" style="width: 400px;">
+            <tr class="tr" v-for="choice in lunchChoices" :key="choice">
+              <td class="td"><input type="checkbox" v-model="includedChoices[choice]"></td>            
+              <td class="td">
+                <del v-if="spinChoicesLeft.length !== 0 && spinChoicesLeft.indexOf(choice) === -1" style="color: red;">{{choice}}</del>
+                <span v-else>{{choice}}</span>
+              </td>
+              <td class="td"><a @click="removeChoice(choice)">x</a></td>
+            </tr>
+            <tr class="tr">
+              <td class="td" colspan="3">
+                <input class="input" type="text" style="width: 200px; margin-right: 10px;" v-model="newChoice"> 
+                <button class="button" @click="onAddChoiceClicked">Add a Choice</button>
+              </td>
+            </tr>
+            <tr class="tr">
+              <td class="td" colspan="3">
+                <button class="button is-primary" style="margin-top: 20px;" @click="onPickLunchClicked">Where Should I Go For LUNCH?!?</button>
+              </td>
+            </tr>
+          </table>    
+          
+          <div style="width: 600px; padding-left: 40px; padding-top: 100px;">
+            <div v-if="showIntro">
+              Too weak minded to make any significant decisions in your life?
+              <br><br>
+              Well the lunch picker has got you covered!
+              <br><br>
+              Just un-check any options that you really don't want to eat at today, click the green button and let 
+              the lunch picker make the hard decisions for you!!
+            </div>
+            <div v-else>
+              <div v-html="spinMessage"></div>
+              <div v-if="waiter > 0"><span v-for="count in waiter" :key="count" style="font-size: 28px; margin-right: 6px;">.</span></div>
+              <div>{{eliminatedMessage}}</div>
+              <div v-if="finalChoice">
+                Congratulations!  You are eating at <b> {{finalChoice}} </b> today for lunch!
+                <br><br> 
+                <button class="button is-primary" style="height: 100px;" @click="onClickedRecord(finalChoice)"> Click to acknowledge the Lunch Picker &reg;
+                as my higher power <br> and record my accepted choice of {{finalChoice}} today. </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <table style="margin-left: 50px;">
+        <tr class="tr">
+          <td class="td" colspan="2">
+            Previous times you let the Lunch Picker &reg; control your life.
+          </td>
+        </tr>
+        <tr class="tr">
+          <td class="td" colspan="2">
+           &nbsp;
+          </td>
+        </tr>
+        <tr class="tr" v-for="(choice, date) in previousChoices">
+          <td class="td">
+            {{(new Date(date)).toDateString()}}
+          </td>
+          <td class="td">
+            {{choice}}
+          </td>
+        </tr>
+      </table>
     </section>
     
   </body>
